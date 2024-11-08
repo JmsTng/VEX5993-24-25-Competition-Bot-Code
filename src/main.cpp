@@ -8,12 +8,13 @@
 /*                  HIGH STAKES                                               */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
+#include <cmath>
 #include "vex.h"
 
 using namespace vex;
 
-// A global instance of vex::brain used for printing to the V5 brain screen
-brain Brain;
+// ******************************* DEFINITIONS ******************************* //
+brain Brain; // A global instance of vex::brain used for printing to the V5 brain screen
 
 // Motors
 motor Left1 = motor(PORT17, ratio18_1, false);
@@ -32,10 +33,13 @@ motor_group Right = motor_group(Left1, Left2);
 
 motor_group Intake = motor_group(Intake1, Intake2);
 
+
+
 // Other devices
 bool remoteEnable = true;
 competition Competition = competition();
 controller Controller = controller(primary);
+int deadzone = 5;
 
 // Tests
 void testSpinAll() {
@@ -59,40 +63,47 @@ void testSpinAll() {
 void driveStop() {
     Left.stop();
     Right.stop();
-    Intake.stop();
-    Claw.stop();
 }
 
-/**
- * Spin wheels forward for a specified angle, at a specified speed.
- * 
- * @param angle double - angle in degrees to spin wheels
- * @param speed double - percentage of full speed to drive at
- */
-void driveForward(double angle, double speed) {
-    Left.setVelocity(speed, percent);
-    Right.setVelocity(speed, percent);
-    Left.spinTo(angle, degrees);
-    Right.spinTo(angle, degrees);
+void driveLeft(double speed) {
+    Left.spin(forward, speed, percent);
 }
 
-/**
- * Spin wheels forward for a specified length of time, at a specified speed.
- * 
- * @param time double - time in seconds to drive
- * @param speed double - percentage of full speed to drive at
- */
-void driveForward(double time, double speed) {
+void driveRight(double speed) {
+    Right.spin(forward, speed, percent);
+}
 
-    Left.setVelocity(speed, percent);
-    Right.setVelocity(speed, percent);
-    Left.spinFor(time, seconds);
-    Right.spinFor(time, seconds);
+void toggleIntake() {
+    static short running = 0;
+    running ^= 1;
+
+    Intake.spin(forward, 100 * running, percent);
+}
+
+void toggleClaw() {
+    static bool grabbing = false;
+
+    if (grabbing) {
+        // let go
+        Claw.spinTo(90, degrees);
+        grabbing = !grabbing;
+    } else {
+        Claw.spinTo(-90, degrees)
+        grabbing = !grabbing;
+    }
 }
 
 
 // Main
 int main() {
-    testSpinAll();
+    Controller.ButtonL1.pressed(toggleIntake);
+    Controller.ButtonR1.pressed(toggleClaw);
     
+    while (1) {
+        int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
+        int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
+
+        driveLeft(y + x);
+        driveRight(y - x);
+    }
 }
