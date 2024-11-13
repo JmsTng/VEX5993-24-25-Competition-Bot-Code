@@ -29,7 +29,7 @@ motor Claw = motor(PORT15, ratio18_1, false);
 
 // Group motors together into groups for easier control
 motor_group Left = motor_group(Left1, Left2);
-motor_group Right = motor_group(Left1, Left2);
+motor_group Right = motor_group(Right1, Right2);
 
 motor_group Intake = motor_group(Intake1, Intake2);
 
