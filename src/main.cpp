@@ -81,16 +81,19 @@ void toggleIntake() {
 }
 
 void toggleClaw() {
-    static bool grabbing = false;
+    static short grabbing = 1; // 1 when not grabbing, -1 when grabbing
 
-    if (grabbing) {
-        // let go
-        Claw.spinTo(90, degrees);
-        grabbing = !grabbing;
-    } else {
-        Claw.spinTo(-90, degrees)
-        grabbing = !grabbing;
-    }
+    Claw.spinTo(120 * grabbing, degrees);
+    grabbing *= -1;
+    
+    // if (grabbing) {
+    //     // let go
+    //     Claw.spinTo(90, degrees);
+    //     grabbing = !grabbing;
+    // } else {
+    //     Claw.spinTo(-90, degrees)
+    //     grabbing = !grabbing;
+    // }
 }
 
 
