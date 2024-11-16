@@ -58,42 +58,51 @@ void testSpinAll() {
 
 // Common Instructions
 /**
- * Stops all motors.
+ * Stops all drivetrain motors.
  */
 void driveStop() {
     Left.stop();
     Right.stop();
 }
 
+/**
+ * Spins left-side motors.
+ *
+ * @param speed A percentage (-100 to 100) representing how fast to go.
+ */
 void driveLeft(double speed) {
     Left.spin(forward, speed, percent);
 }
 
+/**
+ * Spins right-side motors.
+ *
+ * @param speed A percentage (-100 to 100) representing how fast to go.
+ */
 void driveRight(double speed) {
     Right.spin(forward, speed, percent);
 }
 
+/**
+ * Starts up intake (forwards - into bot).
+ * Bound to L1 bumper button.
+ */
 void toggleIntake() {
     static short running = 0;
-    running ^= 1;
+    running ^= 1; // toggle (0 -> 1, 1 -> 0)
 
     Intake.spin(forward, 100 * running, percent);
 }
 
+/**
+ * Toggles state of MoGo claw. Default open.
+ * Bound to R1 bumper button.
+ */
 void toggleClaw() {
     static short grabbing = 1; // 1 when not grabbing, -1 when grabbing
 
     Claw.spinTo(120 * grabbing, degrees);
     grabbing *= -1;
-    
-    // if (grabbing) {
-    //     // let go
-    //     Claw.spinTo(90, degrees);
-    //     grabbing = !grabbing;
-    // } else {
-    //     Claw.spinTo(-90, degrees)
-    //     grabbing = !grabbing;
-    // }
 }
 
 
@@ -106,7 +115,9 @@ int main() {
         int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
         int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
 
-        driveLeft(y + x);
-        driveRight(y - x);
+        driveLeft(y - x);
+        driveRight(y + x);
+
+        wait(5, msec);
     }
 }
