@@ -9,6 +9,7 @@
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
 #include <cmath>
+#include <algorithm>
 #include "vex.h"
 
 using namespace vex;
@@ -36,10 +37,26 @@ motor_group Intake = motor_group(Intake1, Intake2);
 
 
 // Other devices
-bool remoteEnable = true;
+bool remoteEnable = true; 
 competition Competition = competition();
 controller Controller = controller(primary);
-int deadzone = 5;
+// The range (0 to 100) through which an input can be varied without initiating an observable response 
+const short deadzone = 5;
+// Intake speed is global in order to control slow mode based on it
+signed short intakeSpeed=0;
+// A percentage (0 to 100) representing the magnitude of the fastest speed. 
+const short SLOW_MODE_SPEED=50;
+
+//Enumerators for functions; makes code more readable and modular
+enum Claw{
+    GRABBING=-1,
+    NOT_GRABBING=1
+};
+
+enum Intake{
+    NOT_RUNNING=0,
+    RUNNING=1
+};
 
 // Tests
 void testSpinAll() {
@@ -88,10 +105,22 @@ void driveRight(double speed) {
  * Bound to L1 bumper button.
  */
 void toggleIntake() {
-    static short running = 0;
-    running ^= 1; // toggle (0 -> 1, 1 -> 0)
+    static short running = NOT_RUNNING;
+    running ^= RUNNING; // toggle (0 -> 1, 1 -> 0)
 
     Intake.spin(forward, 100 * running, percent);
+}
+
+/**
+ * Controls intake based on vertical position of joystick
+ * Joystick up - into bot
+ * Joystick down - out of bot
+ * Will stop intake when joystick is in deadzone
+ * Bound to left controller joystick
+ */
+void joystickIntake(){
+    intakeSpeed=abs(Controller.Axis4.position()) < deadzone ? 0 : Controller.Axis4.position();
+    Intake.spin(forward, intakeSpeed, percent);
 }
 
 /**
@@ -99,12 +128,26 @@ void toggleIntake() {
  * Bound to R1 bumper button.
  */
 void toggleClaw() {
-    static short grabbing = 1; // 1 when not grabbing, -1 when grabbing
+    static short grabbing = GRABBING; // 1 when not grabbing, -1 when grabbing
 
     Claw.spinTo(120 * grabbing, degrees);
-    grabbing *= -1;
+    grabbing *= NOT_GRABBING;
 }
 
+/**
+ * Helper function to cap speed.
+ * @param speed A percentage (-100 to 100) representing how fast to go.
+ * @param cap A percentage (0 to 100) representing the magnitude of the fastest speed.
+ */
+int capSpeed(int speed, int cap) {
+    if(abs(speed)>cap){
+        if(speed>0){
+            return cap;
+        }
+        return -cap;
+    }
+    return speed;
+}
 
 // Main
 int main() {
@@ -112,11 +155,26 @@ int main() {
     Controller.ButtonR1.pressed(toggleClaw);
     
     while (1) {
+        /*
+        Run drivetrain functions
+        */
         int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
         int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
 
+        
+        //Caps motor speed when the intake is active to allow finer turning control.
+        //Hopefully (?) helps when intaking rings
+        if(intakeSpeed!=0){
+            x=capSpeed(x,SLOW_MODE_SPEED);
+            y=capSpeed(y,SLOW_MODE_SPEED);
+        }
+
         driveLeft(y - x);
         driveRight(y + x);
+        /*
+        Run intake functions
+        */
+        joystickIntake();
 
         wait(5, msec);
     }
