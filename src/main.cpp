@@ -33,11 +33,13 @@ motor Intake2 = motor(PORT12, ratio18_1, true); // lower
 // Group motors together into groups for easier control
 motor_group Left = motor_group(Left1, Left2);
 motor_group Right = motor_group(Right1, Right2);
-
 motor_group Intake = motor_group(Intake1, Intake2);
 
 // Pneumatic control
 digital_out Claw = digital_out(Brain.ThreeWirePort.A);
+
+// Colour
+optical Optical = optical(PORT13);
 
 
 // Other devices
@@ -139,7 +141,18 @@ void usercontrol(void) {
 
     int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
     int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
+    int intake = Controller.Axis4.position();
 
+    if (intake > deadzone) {
+      Intake.spin(forward, 100, percent);
+    } else if (intake < -deadzone) {
+      Intake.spin(forward, -100, percent);
+    } else {
+      Intake.stop();
+    }
+    
+
+    // Quadratic Speed
     x = x * abs(x) / 100;
     y = y * abs(y) / 100;
 
@@ -159,7 +172,6 @@ int main() {
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);
 
-  Controller.ButtonL1.pressed(toggleIntake);
   Controller.ButtonR1.pressed(toggleClaw);
 
   // Run the pre-autonomous function.
