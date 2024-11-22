@@ -141,7 +141,7 @@ void usercontrol(void) {
 
     int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
     int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
-    int intake = Controller.Axis4.position();
+    int intake = Controller.Axis3.position();
 
     if (intake > deadzone) {
       Intake.spin(forward, 100, percent);
