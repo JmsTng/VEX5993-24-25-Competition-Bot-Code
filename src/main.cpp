@@ -28,8 +28,6 @@ motor Right2 = motor(PORT20, ratio18_1, true);
 motor Intake1 = motor(PORT11, ratio18_1, false); // upper
 motor Intake2 = motor(PORT12, ratio18_1, true); // lower
 
-// motor Claw = motor(PORT15, ratio18_1, false);
-
 // Group motors together into groups for easier control
 motor_group Left = motor_group(Left1, Left2);
 motor_group Right = motor_group(Right1, Right2);
@@ -46,6 +44,7 @@ optical Optical = optical(PORT13);
 bool remoteEnable = true;
 controller Controller = controller(primary);
 int deadzone = 5;
+const double wheelCircumference = 319.024;
 
 
 /* HELPER FUNCTIONS */
@@ -55,7 +54,7 @@ int deadzone = 5;
  * @param speed A percentage (-100 to 100) representing how fast to go.
  */
 void driveLeft(double speed) {
-    Left.spin(forward, speed, percent);
+  Left.spin(forward, speed, percent);
 }
 
 /**
@@ -64,18 +63,48 @@ void driveLeft(double speed) {
  * @param speed A percentage (-100 to 100) representing how fast to go.
  */
 void driveRight(double speed) {
-    Right.spin(forward, speed, percent);
+  Right.spin(forward, speed, percent);
 }
+
+/**
+ * Spins left-side motors to travel a certain distance.
+ *
+ * @param distance A double representing travel distance in millimeters.
+ */
+void driveLeftDist(double distance) {
+  Left.spinFor(forward, distance / wheelCircumference * 360, degrees);
+}
+
+
+/**
+ * Spins right-side motors to travel a certain distance.
+ *
+ * @param distance A double representing travel distance in millimeters.
+ */
+void driveRightDist(double distance) {
+  Right.spinFor(forward, distance / wheelCircumference * 360, degrees);
+}
+
+/**
+ * Calculate the 
+ */
+void turn(double angle) {
+    double distancePerDegree = 17*25.4*3.14/360; // Bot circumference in mm
+
+    driveLeftDist(distancePerDegree*angle);
+    driveRightDist(-distancePerDegree*angle);
+}
+
 
 /**
  * Starts up intake (forwards - into bot).
  * Bound to L1 bumper button.
  */
 void toggleIntake() {
-    static short running = 0;
-    running ^= 1; // toggle (0 -> 1, 1 -> 0)
+  static short running = 0;
+  running ^= 1; // toggle (0 -> 1, 1 -> 0)
 
-    Intake.spin(forward, 100 * running, percent);
+  Intake.spin(forward, 100 * running, percent);
 }
 
 /**
@@ -83,10 +112,31 @@ void toggleIntake() {
  * Bound to R1 bumper button.
  */
 void toggleClaw() {
-    static short grabbing = 1; // 1 when not grabbing, -1 when grabbing
+  static short grabbing = 1; // 1 when not grabbing, -1 when grabbing
 
-    Claw.set(grabbing);
-    grabbing ^= 1;
+  Claw.set(grabbing);
+  grabbing ^= 1;
+}
+
+/**
+ * Maps speed to a quadratic function.
+ * Center goes slow, outside is normal.
+ *
+ * @param speed An integer speed value.
+ */
+double quadratic(int speed) {
+  return speed * abs(speed) / 100;
+}
+
+void reportTemps() {
+  Brain.Screen.clearScreen();
+  Brain.Screen.print("Left1: %f C", Left1.temperature());
+  Brain.Screen.newLine();
+  Brain.Screen.print("Left2: %f C", Left2.temperature());
+  Brain.Screen.newLine();
+  Brain.Screen.print("Right1: %f C", Right1.temperature());
+  Brain.Screen.newLine();
+  Brain.Screen.print("Right2: %f C", Right2.temperature());
 }
 
 
@@ -104,6 +154,8 @@ void pre_auton(void) {
 
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
+
+  Claw.set(0);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -117,9 +169,20 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  // ..........................................................................
-  // Insert autonomous user code here.
-  // ..........................................................................
+  // Approach mogo
+  driveLeftDist(200);
+  driveRightDist(200);
+
+  // Turn around
+  turn(230);
+
+  // Attempt mogo grab
+  Claw.set(1);
+
+  // Retreat
+  turn(-90);
+  driveLeftDist(200);
+  driveRightDist(200);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -135,32 +198,27 @@ void autonomous(void) {
 void usercontrol(void) {
   // User control code here, inside the loop
   while (1) {
-    // This is the main execution loop for the user control program.
-    // Each time through the loop your program should update motor + servo
-    // values based on feedback from the joysticks.
+  // This is the main execution loop for the user control program.
+  // Each time through the loop your program should update motor + servo
+  // values based on feedback from the joysticks.
 
-    int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
-    int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
-    int intake = Controller.Axis3.position();
+  int x = abs(Controller.Axis1.position()) < deadzone ? 0 : Controller.Axis1.position();
+  int y = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
+  int intake = Controller.Axis3.position();
 
-    if (intake > deadzone) {
-      Intake.spin(forward, 100, percent);
-    } else if (intake < -deadzone) {
-      Intake.spin(forward, -100, percent);
-    } else {
-      Intake.stop();
-    }
-    
+  if (intake > deadzone) {
+    Intake.spin(forward, 100, percent);
+  } else if (intake < -deadzone) {
+    Intake.spin(forward, -100, percent);
+  } else {
+    Intake.stop();
+  }
 
-    // Quadratic Speed
-    x = x * abs(x) / 100;
-    y = y * abs(y) / 100;
+  driveLeft(quadratic(y - x));
+  driveRight(quadratic(y + x));
 
-    driveLeft(y - x);
-    driveRight(y + x);
-
-    wait(20, msec); // Sleep the task for a short amount of time to
-                    // prevent wasted resources.
+  wait(20, msec); // Sleep the task for a short amount of time to
+                  // prevent wasted resources.
   }
 }
 
@@ -173,6 +231,7 @@ int main() {
   Competition.drivercontrol(usercontrol);
 
   Controller.ButtonR1.pressed(toggleClaw);
+  Controller.ButtonL1.pressed(reportTemps);
 
   // Run the pre-autonomous function.
   pre_auton();
