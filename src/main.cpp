@@ -20,12 +20,12 @@ competition Competition;
 brain Brain; // A global instance of vex::brain used for printing to the V5 brain screen
 
 // Motors
-motor Left1 = motor(PORT9, ratio18_1, true);
-motor Left2 = motor(PORT10, ratio18_1, true);
-motor Left3 = motor(PORT8, ratio18_1, false);
-motor Right1 = motor(PORT1, ratio18_1, false);
-motor Right2 = motor(PORT2, ratio18_1, false);
-motor Right3 = motor(PORT3, ratio18_1, true);
+motor Left1 = motor(PORT9, ratio18_1, false);
+motor Left2 = motor(PORT10, ratio18_1, false);
+motor Left3 = motor(PORT8, ratio18_1, true);
+motor Right1 = motor(PORT1, ratio18_1, true);
+motor Right2 = motor(PORT2, ratio18_1, true);
+motor Right3 = motor(PORT3, ratio18_1, false);
 
 motor Intake1 = motor(PORT11, ratio18_1, false); // upper
 motor Intake2 = motor(PORT12, ratio18_1, true); // lower
@@ -43,10 +43,16 @@ digital_out Claw = digital_out(Brain.ThreeWirePort.A);
 
 
 // Other devices
-bool remoteEnable = true;
 controller Controller = controller(primary);
-int deadzone = 5;
 
+// Variables
+bool remoteEnable = true; // Competition switch
+int deadzone = 5; // For controller
+
+double wheelDiameterIn = 3.25; // in ft
+double wheelDiameterMm = 82.55; // in mm
+double wheelTravelIn = 10.24; // circumference in inches
+double wheelTravelMm = 260; // circumference in mm
 
 /* HELPER FUNCTIONS */
 /**
@@ -65,6 +71,35 @@ void driveLeft(double speed) {
  */
 void driveRight(double speed) {
     Right.spin(forward, speed, percent);
+}
+
+/**
+ * Calculates an angle from a distance (arc length).
+ *
+ * @param distance A double for distance IN FEET.
+ * @return The angle to achieve the specified distance.
+ */
+double calculateAngle(double distance) {
+  return distance / (wheelDiameterMm * 3.1415 / 360);
+}
+
+void driveDistance(double distance, bool imperial) { // in mm or feet
+  double angle;
+
+  if (imperial) {
+    angle = calculateAngle(distance * 25.4);
+  } else {
+    angle = calculateAngle(distance);
+  }
+
+  Brain.Screen.print(angle);
+
+  Left.spinFor(forward, angle, degrees, false);
+  Right.spinFor(forward, angle, degrees);
+}
+
+void drive() {
+  driveDistance(24, true);
 }
 
 /**
@@ -177,6 +212,8 @@ int main() {
 
   Controller.ButtonR1.pressed(toggleClaw);
   Controller.ButtonUp.pressed(toggleIntake);
+
+  Controller.ButtonDown.pressed(drive);
 
   // Run the pre-autonomous function.
   pre_auton();
