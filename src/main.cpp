@@ -83,6 +83,9 @@ double calculateAngle(double distance) {
   return distance / (wheelDiameterMm * 3.1415 / 360);
 }
 
+/**
+ * 
+ */
 void driveDistance(double distance, bool imperial) { // in mm or feet
   double angle;
 
@@ -92,8 +95,6 @@ void driveDistance(double distance, bool imperial) { // in mm or feet
     angle = calculateAngle(distance);
   }
 
-  Brain.Screen.print(angle);
-
   Left.spinFor(forward, angle, degrees, false);
   Right.spinFor(forward, angle, degrees);
 }
@@ -102,12 +103,17 @@ void drive() {
   driveDistance(24, true);
 }
 
+void turnAngle(double theta, double radius) {
+// CREATE TRACK WITDH VAR
+
+}
+
 /**
  * Starts up intake (forwards - into bot).
  * Bound to L1 bumper button.
  */
 void toggleIntake() {
-    static short running = 0;
+    static bool running = 0;
     running ^= 1; // toggle (0 -> 1, 1 -> 0)
 
     Intake.spin(forward, 100 * running, percent);
@@ -118,7 +124,7 @@ void toggleIntake() {
  * Bound to R1 bumper button.
  */
 void toggleClaw() {
-    static short grabbing = 1; // 1 when not grabbing, -1 when grabbing
+    static bool grabbing = 1; // 1 when not grabbing, -1 when grabbing
 
     Claw.set(grabbing);
     grabbing ^= 1;
@@ -128,7 +134,7 @@ double powKeepSign(double x, int power) {
     int sign;
 
     if (x < 0 && power % 2 == 0) sign = -1;
-    else                     sign = 1;
+    else                         sign = 1;
 
     return (pow(x, power) / pow(100, power-1)) * sign;
 }
@@ -186,13 +192,6 @@ void usercontrol(void) {
     int yLeft = abs(Controller.Axis3.position()) < deadzone ? 0 : Controller.Axis3.position();
     int yRight = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
     
-
-    // // Speed Scaling
-    // double power = 5;
-    // x = powKeepSign(x, power);
-
-    // driveLeft(y - x);
-    // driveRight(y + x);
 
     driveLeft(-yLeft);
     driveRight(-yRight);
