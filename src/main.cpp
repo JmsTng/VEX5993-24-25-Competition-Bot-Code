@@ -56,42 +56,27 @@ double wheelTravelMm = 260; // circumference in mm
 
 /* HELPER FUNCTIONS */
 /**
- * Spins left-side motors.
+ * Calculates the wheel angle for a specified linear distance (arc length).
  *
- * @param speed A percentage (-100 to 100) representing how fast to go.
- */
-void driveLeft(double speed) {
-    Left.spin(forward, speed, percent);
-}
-
-/**
- * Spins right-side motors.
- *
- * @param speed A percentage (-100 to 100) representing how fast to go.
- */
-void driveRight(double speed) {
-    Right.spin(forward, speed, percent);
-}
-
-/**
- * Calculates an angle from a distance (arc length).
- *
- * @param distance A double for distance IN FEET.
- * @return The angle to achieve the specified distance.
+ * @param distance A double for distance IN MM.
+ * @return The wheel angle to achieve the specified distance.
  */
 double calculateAngle(double distance) {
   return distance / (wheelDiameterMm * 3.1415 / 360);
 }
 
 /**
+ * Takes a linear distance and calculates how much the wheels need to turn in order to get there.
  * 
+ * @param distance The linear distance to travel.
+ * @param imperial Whether the distance is given in inches or millimeters.
  */
-void driveDistance(double distance, bool imperial) { // in mm or feet
+void driveDistance(double distance, bool imperial) {
   double angle;
 
-  if (imperial) {
+  if (imperial) { // in inches
     angle = calculateAngle(distance * 25.4);
-  } else {
+  } else { // in mm
     angle = calculateAngle(distance);
   }
 
@@ -99,13 +84,23 @@ void driveDistance(double distance, bool imperial) { // in mm or feet
   Right.spinFor(forward, angle, degrees);
 }
 
-void drive() {
-  driveDistance(24, true);
+/**
+ * Calculates how much the wheels need to move in order to turn the robot a specified amount.
+ *
+ * @param theta The desired angle to turn.
+ */
+void turnAngle(double theta) {
+  double distance = 360 * theta / 3.1415;
+  double wheelAngle = calculateAngle(distance);
+
+  Left.spinFor(forward, wheelAngle, degrees, false);
+  Right.spinFor(forward, -wheelAngle, degrees);
 }
 
-void turnAngle(double theta, double radius) {
-// CREATE TRACK WITDH VAR
-
+void driveRoutine() {
+  driveDistance(24, true);
+  turnAngle(90);
+  driveDistance(12, true);
 }
 
 /**
@@ -193,8 +188,8 @@ void usercontrol(void) {
     int yRight = abs(Controller.Axis2.position()) < deadzone ? 0 : Controller.Axis2.position();
     
 
-    driveLeft(-yLeft);
-    driveRight(-yRight);
+    Left.spin(forward, -yLeft, percent);
+    Right.spin(forward, -yRight, percent);
 
     wait(20, msec); // Sleep the task for a short amount of time to
                     // prevent wasted resources.
